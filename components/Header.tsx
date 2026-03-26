@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { Location } from "@/lib/types";
 import { LocationSelector } from "./LocationSelector";
 import { SearchBar } from "./SearchBar";
@@ -7,35 +8,39 @@ import { SearchBar } from "./SearchBar";
 interface HeaderProps {
   locations: Location[];
   selectedLocationId: string | null;
-  onLocationChange: (id: string) => void;
+  onOpenLocationPicker: () => void;
   onSearch: (query: string) => void;
 }
 
 export function Header({
   locations,
   selectedLocationId,
-  onLocationChange,
+  onOpenLocationPicker,
   onSearch,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-10 bg-white border-b border-border-light">
+    <header className="sticky top-0 z-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 py-3">
-        {/* Mobile: stacked rows */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-          {/* Row 1: Logo + Location + (desktop) search */}
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-brand-dark whitespace-nowrap">
-              Per Diem
-            </h1>
-            <LocationSelector
-              locations={locations}
-              selectedId={selectedLocationId}
-              onLocationChange={onLocationChange}
-            />
-          </div>
+        <div className="flex items-center gap-4">
+          {/* Logo */}
+          <Image
+            src="/per_diem_logo.svg"
+            alt="Per Diem"
+            width={50}
+            height={32}
+            className="shrink-0"
+            priority
+          />
 
-          {/* Row 2: Search */}
+          {/* Search bar */}
           <SearchBar onSearch={onSearch} />
+
+          {/* Location selector */}
+          <LocationSelector
+            locations={locations}
+            selectedId={selectedLocationId}
+            onOpenPicker={onOpenLocationPicker}
+          />
         </div>
       </div>
     </header>

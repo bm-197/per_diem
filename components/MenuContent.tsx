@@ -8,21 +8,29 @@ import { useSearch } from "@/lib/hooks/useSearch";
 import { Header } from "./Header";
 import { CategoryNav } from "./CategoryNav";
 import { MenuSection } from "./MenuSection";
+import { FeaturedSection } from "./FeaturedSection";
+import { ItemDetailModal } from "./ItemDetailModal";
+import { LocationPickerModal } from "./LocationPickerModal";
+import { DietaryFilterModal, type DietaryFilters } from "./DietaryFilterModal";
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { ErrorState } from "./ErrorState";
 import { EmptyState } from "./EmptyState";
 import { Footer } from "./Footer";
+import type { MenuItem } from "@/lib/types";
 
 const STORAGE_KEY = "selectedLocationId";
 
 export function MenuContent() {
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null
-  );
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null
-  );
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+  const [isDietaryFilterOpen, setIsDietaryFilterOpen] = useState(false);
+  const [dietaryFilters, setDietaryFilters] = useState<DietaryFilters>({
+    allergens: [],
+    preferences: [],
+  });
 
   const {
     locations,
@@ -42,13 +50,15 @@ export function MenuContent() {
 
   const filteredBySearch = useSearch(catalogCategories, searchQuery);
 
-  // Filter by selected category
   const displayedCategories =
     selectedCategoryId === null
       ? filteredBySearch
       : filteredBySearch.filter(
           (group) => group.category.id === selectedCategoryId
         );
+
+  const activeDietaryFilterCount =
+    dietaryFilters.allergens.length + dietaryFilters.preferences.length;
 
   // Restore location from localStorage on mount
   useEffect(() => {
@@ -60,13 +70,14 @@ export function MenuContent() {
   useEffect(() => {
     if (!selectedLocationId && locations.length > 0) {
       const saved = localStorage.getItem(STORAGE_KEY);
-      const id = saved && locations.some((l) => l.id === saved) ? saved : locations[0].id;
+      const id =
+        saved && locations.some((l) => l.id === saved) ? saved : locations[0].id;
       setSelectedLocationId(id);
       localStorage.setItem(STORAGE_KEY, id);
     }
   }, [locations, selectedLocationId]);
 
-  const handleLocationChange = useCallback((id: string) => {
+  const handleLocationConfirm = useCallback((id: string) => {
     setSelectedLocationId(id);
     setSelectedCategoryId(null);
     setSearchQuery("");
@@ -77,13 +88,24 @@ export function MenuContent() {
     setSearchQuery(query);
   }, []);
 
-  // Scroll to category section when selected
   const handleCategoryChange = useCallback((id: string | null) => {
     setSelectedCategoryId(id);
     if (id) {
       const el = document.getElementById(`section-${id}`);
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+  }, []);
+
+  const handleItemClick = useCallback((item: MenuItem) => {
+    setSelectedItem(item);
+  }, []);
+
+  const handleCloseItemModal = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
+  const handleApplyDietaryFilters = useCallback((filters: DietaryFilters) => {
+    setDietaryFilters(filters);
   }, []);
 
   // Error state
@@ -93,7 +115,7 @@ export function MenuContent() {
         <Header
           locations={[]}
           selectedLocationId={null}
-          onLocationChange={handleLocationChange}
+          onOpenLocationPicker={() => {}}
           onSearch={handleSearch}
         />
         <main className="flex-1 max-w-7xl mx-auto w-full px-4">
@@ -104,23 +126,50 @@ export function MenuContent() {
     );
   }
 
+  const hasItems = displayedCategories.length > 0;
+
   return (
     <>
       <Header
         locations={locations}
         selectedLocationId={selectedLocationId}
-        onLocationChange={handleLocationChange}
+        onOpenLocationPicker={() => setIsLocationPickerOpen(true)}
         onSearch={handleSearch}
       />
 
-      {/* Category navigation */}
+      {/* Category navigation + Dietary filter */}
       {categorySummaries.length > 0 && (
-        <div className="sticky top-[73px] z-10 bg-white border-b border-border-light max-w-7xl mx-auto w-full">
-          <CategoryNav
-            categories={categorySummaries}
-            selectedId={selectedCategoryId}
-            onCategoryChange={handleCategoryChange}
-          />
+        <div className="sticky top-[65px] z-10 bg-white border-b border-border-light">
+          <div className="max-w-7xl mx-auto w-full flex items-center">
+            <div className="flex-1 overflow-hidden">
+              <CategoryNav
+                categories={categorySummaries}
+                selectedId={selectedCategoryId}
+                onCategoryChange={handleCategoryChange}
+              />
+            </div>
+
+            {/* Dietary filter button */}
+            <div className="shrink-0 pr-4 pl-2">
+              <button
+                onClick={() => setIsDietaryFilterOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border-default
+                           text-sm hover:bg-bg-secondary transition-colors relative"
+              >
+                <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <span className="hidden md:inline text-text-muted">Dietary Filter</span>
+                {activeDietaryFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-brand text-white text-xs
+                                   rounded-full flex items-center justify-center font-medium">
+                    {activeDietaryFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -129,16 +178,47 @@ export function MenuContent() {
           <LoadingSkeleton />
         ) : catalogError ? (
           <ErrorState message={catalogError} onRetry={retryCatalog} />
-        ) : displayedCategories.length === 0 ? (
+        ) : !hasItems ? (
           <EmptyState />
         ) : (
-          displayedCategories.map((group) => (
-            <MenuSection key={group.category.id} group={group} />
-          ))
+          <>
+            {selectedCategoryId === null && !searchQuery && (
+              <FeaturedSection
+                categories={catalogCategories}
+                onItemClick={handleItemClick}
+              />
+            )}
+
+            {displayedCategories.map((group) => (
+              <MenuSection
+                key={group.category.id}
+                group={group}
+                onItemClick={handleItemClick}
+              />
+            ))}
+          </>
         )}
       </main>
 
       <Footer />
+
+      {/* Modals */}
+      <ItemDetailModal item={selectedItem} onClose={handleCloseItemModal} />
+
+      <LocationPickerModal
+        isOpen={isLocationPickerOpen}
+        onClose={() => setIsLocationPickerOpen(false)}
+        locations={locations}
+        selectedId={selectedLocationId}
+        onConfirm={handleLocationConfirm}
+      />
+
+      <DietaryFilterModal
+        isOpen={isDietaryFilterOpen}
+        onClose={() => setIsDietaryFilterOpen(false)}
+        onApply={handleApplyDietaryFilters}
+        currentFilters={dietaryFilters}
+      />
     </>
   );
 }

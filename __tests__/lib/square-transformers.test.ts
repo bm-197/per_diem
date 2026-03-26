@@ -195,14 +195,14 @@ describe("transformCategories", () => {
       {
         category: { id: "cat1", name: "Coffee" },
         items: [
-          { id: "1", name: "Latte", description: "", categoryName: "Coffee", imageUrl: null, variations: [] },
-          { id: "2", name: "Mocha", description: "", categoryName: "Coffee", imageUrl: null, variations: [] },
+          { id: "1", name: "Latte", description: "", categoryName: "Coffee", imageUrl: null, variations: [], modifierLists: [] },
+          { id: "2", name: "Mocha", description: "", categoryName: "Coffee", imageUrl: null, variations: [], modifierLists: [] },
         ],
       },
       {
         category: { id: "cat2", name: "Tea" },
         items: [
-          { id: "3", name: "Green", description: "", categoryName: "Tea", imageUrl: null, variations: [] },
+          { id: "3", name: "Green", description: "", categoryName: "Tea", imageUrl: null, variations: [], modifierLists: [] },
         ],
       },
     ];

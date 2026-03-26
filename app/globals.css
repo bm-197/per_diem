@@ -5,7 +5,7 @@
   --foreground: #11181c;
 
   /* Brand */
-  --brand-primary: #c93838;
+  --brand-primary: #0171ea;
   --brand-dark: #182435;
 
   /* Text */
@@ -18,7 +18,7 @@
   /* Backgrounds */
   --bg-primary: #ffffff;
   --bg-secondary: #f0f0f0;
-  --bg-brand: #c93838;
+  --bg-brand: #0171ea;
   --bg-badge: #2563eb;
 
   /* Borders */
@@ -52,4 +52,13 @@ body {
   font-family: var(--font-sora), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial,
     sans-serif;
+}
+
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

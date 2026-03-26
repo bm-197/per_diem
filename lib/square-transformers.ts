@@ -4,6 +4,8 @@ import type {
   CategoryGroup,
   MenuItem,
   Variation,
+  ModifierList,
+  Modifier,
   CategorySummary,
 } from "./types";
 import { formatPrice } from "./utils";
@@ -43,15 +45,17 @@ function isPresentAtLocation(
 }
 
 /**
- * Build lookup maps from related objects for O(1) category name
- * and image URL resolution.
+ * Build lookup maps from related objects for O(1) resolution
+ * of category names, image URLs, and modifier lists.
  */
 function buildLookups(relatedObjects: Square.CatalogObject[]): {
   categories: Map<string, string>;
   images: Map<string, string>;
+  modifierLists: Map<string, Square.CatalogObject.ModifierList>;
 } {
   const categories = new Map<string, string>();
   const images = new Map<string, string>();
+  const modifierLists = new Map<string, Square.CatalogObject.ModifierList>();
 
   for (const obj of relatedObjects) {
     if (obj.type === "CATEGORY") {
@@ -66,9 +70,15 @@ function buildLookups(relatedObjects: Square.CatalogObject[]): {
         images.set(imgObj.id, imgObj.imageData.url);
       }
     }
+    if (obj.type === "MODIFIER_LIST") {
+      const mlObj = obj as Square.CatalogObject.ModifierList;
+      if (mlObj.id) {
+        modifierLists.set(mlObj.id, mlObj);
+      }
+    }
   }
 
-  return { categories, images };
+  return { categories, images, modifierLists };
 }
 
 /** Transform a single ITEM_VARIATION catalog object into our Variation type. */
@@ -91,6 +101,37 @@ function transformVariation(
   };
 }
 
+/** Transform a Square MODIFIER_LIST into our ModifierList type. */
+function transformModifierList(
+  mlObj: Square.CatalogObject.ModifierList
+): ModifierList {
+  const mlData = mlObj.modifierListData;
+  const modifiers: Modifier[] = (mlData?.modifiers ?? [])
+    .filter((m): m is Square.CatalogObject.Modifier => m.type === "MODIFIER")
+    .map((m) => {
+      const md = m.modifierData;
+      const price = Number(md?.priceMoney?.amount ?? 0);
+      const currency = md?.priceMoney?.currency ?? "USD";
+      return {
+        id: m.id,
+        name: md?.name ?? "Unknown",
+        price,
+        formattedPrice: price > 0 ? `+${formatPrice(price, currency)}` : "",
+        currency,
+        onByDefault: md?.onByDefault ?? false,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    id: mlObj.id,
+    name: mlData?.name ?? "Options",
+    minSelected: Number(mlData?.minSelectedModifiers ?? 0),
+    maxSelected: Number(mlData?.maxSelectedModifiers ?? 0),
+    modifiers,
+  };
+}
+
 /**
  * Transform raw Square catalog objects + related objects into
  * CategoryGroup[] grouped by category, filtered by location.
@@ -100,7 +141,7 @@ export function transformCatalogItems(
   relatedObjects: Square.CatalogObject[],
   locationId: string
 ): CategoryGroup[] {
-  const { categories: categoryMap, images: imageMap } =
+  const { categories: categoryMap, images: imageMap, modifierLists: modifierListMap } =
     buildLookups(relatedObjects);
 
   const grouped = new Map<string, { category: { id: string; name: string }; items: MenuItem[] }>();
@@ -135,6 +176,23 @@ export function transformCatalogItems(
       .map(transformVariation)
       .filter((v): v is Variation => v !== null);
 
+    // Transform modifier lists
+    const modifierLists: ModifierList[] = (itemData.modifierListInfo ?? [])
+      .map((info) => {
+        const mlObj = modifierListMap.get(info.modifierListId);
+        if (!mlObj) return null;
+        const ml = transformModifierList(mlObj);
+        // Apply item-level overrides for min/max if set
+        if (info.minSelectedModifiers != null && info.minSelectedModifiers >= 0) {
+          ml.minSelected = info.minSelectedModifiers;
+        }
+        if (info.maxSelectedModifiers != null && info.maxSelectedModifiers >= 0) {
+          ml.maxSelected = info.maxSelectedModifiers;
+        }
+        return ml;
+      })
+      .filter((ml): ml is ModifierList => ml !== null && ml.modifiers.length > 0);
+
     const menuItem: MenuItem = {
       id: item.id,
       name: itemData.name ?? "Unnamed Item",
@@ -142,6 +200,7 @@ export function transformCatalogItems(
       categoryName,
       imageUrl,
       variations,
+      modifierLists,
     };
 
     if (!grouped.has(categoryId)) {

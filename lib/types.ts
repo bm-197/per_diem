@@ -42,6 +42,24 @@ export interface MenuItem {
   categoryName: string;
   imageUrl: string | null;
   variations: Variation[];
+  modifierLists: ModifierList[];
+}
+
+export interface ModifierList {
+  id: string;
+  name: string;
+  minSelected: number;
+  maxSelected: number;
+  modifiers: Modifier[];
+}
+
+export interface Modifier {
+  id: string;
+  name: string;
+  price: number;
+  formattedPrice: string;
+  currency: string;
+  onByDefault: boolean;
 }
 
 export interface Variation {

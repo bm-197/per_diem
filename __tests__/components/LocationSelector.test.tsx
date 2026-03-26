@@ -21,42 +21,42 @@ const locations: Location[] = [
 ];
 
 describe("LocationSelector", () => {
-  it("renders all location options", () => {
+  it("renders selected location name", () => {
     render(
       <LocationSelector
         locations={locations}
         selectedId="loc1"
-        onLocationChange={() => {}}
+        onOpenPicker={() => {}}
       />
     );
 
     expect(screen.getByText("Downtown")).toBeInTheDocument();
-    expect(screen.getByText("Uptown")).toBeInTheDocument();
+    expect(screen.getByText("Pickup from")).toBeInTheDocument();
   });
 
-  it("calls onLocationChange when selection changes", () => {
-    const onChange = vi.fn();
+  it("calls onOpenPicker when clicked", () => {
+    const onOpen = vi.fn();
     render(
       <LocationSelector
         locations={locations}
         selectedId="loc1"
-        onLocationChange={onChange}
+        onOpenPicker={onOpen}
       />
     );
 
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "loc2" } });
-    expect(onChange).toHaveBeenCalledWith("loc2");
+    fireEvent.click(screen.getByRole("button"));
+    expect(onOpen).toHaveBeenCalledOnce();
   });
 
-  it("shows loading text when no locations provided", () => {
+  it("shows fallback text when no location selected", () => {
     render(
       <LocationSelector
         locations={[]}
         selectedId={null}
-        onLocationChange={() => {}}
+        onOpenPicker={() => {}}
       />
     );
 
-    expect(screen.getByText("Loading locations...")).toBeInTheDocument();
+    expect(screen.getByText("Select location...")).toBeInTheDocument();
   });
 });

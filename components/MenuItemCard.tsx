@@ -3,15 +3,16 @@ import type { MenuItem } from "@/lib/types";
 
 interface MenuItemCardProps {
   item: MenuItem;
+  onClick?: () => void;
 }
 
-export function MenuItemCard({ item }: MenuItemCardProps) {
+export function MenuItemCard({ item, onClick }: MenuItemCardProps) {
   const primaryPrice =
     item.variations.length > 0 ? item.variations[0].formattedPrice : null;
   const hasMultipleVariations = item.variations.length > 1;
 
   return (
-    <div className="group flex flex-col cursor-pointer">
+    <button type="button" onClick={onClick} className="group flex flex-col cursor-pointer text-left">
       {/* Image */}
       <div className="relative aspect-square w-full overflow-hidden rounded-[34px] md:rounded-lg">
         {item.imageUrl ? (
@@ -68,6 +69,6 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
           </p>
         )}
       </div>
-    </div>
+    </button>
   );
 }

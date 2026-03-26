@@ -6,7 +6,7 @@ export function Footer() {
       </p>
       <div className="text-center pb-6 px-4 space-y-2">
         <p className="text-sm font-semibold text-text-secondary">
-          Per Diem Coffee
+          Per Diem
         </p>
         <div className="flex justify-center gap-4 text-sm">
           <a

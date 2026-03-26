@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: "Per Diem",
   description:
     "Restaurant menu powered by Square — browse items by location and category",
+  icons: {
+    icon: "/per_diem_logo.svg",
+  },
 };
 
 export default function RootLayout({

@@ -12,6 +12,7 @@ const baseItem: MenuItem = {
   variations: [
     { id: "v1", name: "Regular", price: 450, formattedPrice: "$4.50", currency: "USD" },
   ],
+  modifierLists: [],
 };
 
 describe("MenuItemCard", () => {

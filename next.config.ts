@@ -1,7 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "items-images-production.s3.us-west-2.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "square-catalog-sandbox.s3.amazonaws.com",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

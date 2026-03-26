@@ -2,25 +2,54 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #11181c;
+
+  /* Brand */
+  --brand-primary: #c93838;
+  --brand-dark: #182435;
+
+  /* Text */
+  --text-primary: #11181c;
+  --text-heading: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4b5563;
+  --text-subtle: #52525b;
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0f0f0;
+  --bg-brand: #c93838;
+  --bg-badge: #2563eb;
+
+  /* Borders */
+  --border-light: #f0f0f0;
+  --border-default: #e5e7eb;
+  --border-muted: #c1c1c1;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: var(--brand-primary);
+  --color-brand-dark: var(--brand-dark);
+  --color-text-primary: var(--text-primary);
+  --color-text-heading: var(--text-heading);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-brand: var(--bg-brand);
+  --color-bg-badge: var(--bg-badge);
+  --color-border-light: var(--border-light);
+  --color-border-default: var(--border-default);
+  --color-border-muted: var(--border-muted);
+  --font-sans: var(--font-sora);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sora), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial,
+    sans-serif;
 }

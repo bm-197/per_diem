@@ -15,7 +15,9 @@ export function LocationSelector({
   onLocationChange,
 }: LocationSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownTop, setDropdownTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const selectedLocation = locations.find((l) => l.id === selectedId);
 
   useEffect(() => {
@@ -47,8 +49,14 @@ export function LocationSelector({
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen && buttonRef.current) {
+            setDropdownTop(buttonRef.current.getBoundingClientRect().bottom + 6);
+          }
+          setIsOpen(!isOpen);
+        }}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={`Pickup from ${selectedLocation?.name ?? "Select location"}`}
@@ -89,11 +97,14 @@ export function LocationSelector({
         <div
           role="listbox"
           aria-label="Select pickup location"
-          className="absolute top-[calc(100%+6px)] right-0 md:left-0 md:right-auto z-50
-                     w-[calc(100vw-2rem)] max-w-[420px]
+          className="fixed left-3 right-3 md:left-auto md:right-auto md:w-[420px] z-50
                      bg-background border border-border-default rounded-2xl
                      shadow-xl shadow-black/10 overflow-hidden"
-          style={{ animation: "island-expand 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          style={{ top: `${dropdownTop}px`,
+            ...(buttonRef.current && window.innerWidth >= 768
+              ? { left: `${buttonRef.current.getBoundingClientRect().left}px` }
+              : {}),
+          }}
         >
           <div className="max-h-[320px] overflow-y-auto p-2 space-y-1">
             {locations.map((loc) => {

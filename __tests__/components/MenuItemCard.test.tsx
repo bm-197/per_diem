@@ -13,6 +13,7 @@ const baseItem: MenuItem = {
     { id: "v1", name: "Regular", price: 450, formattedPrice: "$4.50", currency: "USD" },
   ],
   modifierLists: [],
+  availability: { status: "IN_STOCK" },
 };
 
 describe("MenuItemCard", () => {

@@ -15,12 +15,13 @@ export function SearchBar({ onSearch }: SearchBarProps) {
   }, [value, onSearch]);
 
   return (
-    <div className="relative flex-1 max-w-md">
+    <div className="relative w-full md:max-w-md">
       <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
@@ -34,8 +35,10 @@ export function SearchBar({ onSearch }: SearchBarProps) {
         placeholder="Search items..."
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="w-full rounded-full border border-border-muted pl-10 pr-4 py-2 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-brand/30
+        className="w-full rounded-full border border-border-muted pl-11 pr-4 h-10 text-sm
+                   bg-background text-foreground transition-colors duration-200
+                   hover:border-border-muted/80
+                   focus:outline-none focus:border-brand
                    placeholder:text-text-muted"
       />
     </div>

@@ -51,10 +51,10 @@ export function LocationPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 modal-overlay"
       onClick={handleBackdrop}
     >
-      <div className="bg-white w-full max-w-lg max-h-[80vh] rounded-t-2xl md:rounded-2xl flex flex-col mx-0 md:mx-4">
+      <div className="bg-background w-full max-w-lg max-h-[80vh] rounded-t-2xl md:rounded-2xl flex flex-col mx-0 md:mx-4 modal-content-mobile md:modal-content">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border-default">
           <h2 className="text-lg font-bold">Select a location</h2>

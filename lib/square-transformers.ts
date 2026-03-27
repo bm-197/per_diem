@@ -7,6 +7,7 @@ import type {
   ModifierList,
   Modifier,
   CategorySummary,
+  ItemAvailability,
 } from "./types";
 import { formatPrice } from "./utils";
 
@@ -132,6 +133,53 @@ function transformModifierList(
   };
 }
 
+const LOW_STOCK_THRESHOLD = 5;
+
+/** Determine item availability from inventory counts and catalog flags. */
+function determineAvailability(
+  itemData: Square.CatalogItem,
+  inventoryCounts?: Map<string, number>
+): ItemAvailability {
+  // If item is archived, treat as sold out
+  if (itemData.isArchived) {
+    return { status: "SOLD_OUT" };
+  }
+
+  // If no inventory data available, assume in stock
+  if (!inventoryCounts || inventoryCounts.size === 0) {
+    return { status: "IN_STOCK" };
+  }
+
+  // Check inventory across all variations
+  let totalQuantity = 0;
+  let hasInventoryData = false;
+
+  for (const variation of itemData.variations ?? []) {
+    if (variation.type === "ITEM_VARIATION") {
+      const qty = inventoryCounts.get(variation.id);
+      if (qty !== undefined) {
+        hasInventoryData = true;
+        totalQuantity += qty;
+      }
+    }
+  }
+
+  // If no inventory tracking for this item, assume in stock
+  if (!hasInventoryData) {
+    return { status: "IN_STOCK" };
+  }
+
+  if (totalQuantity <= 0) {
+    return { status: "SOLD_OUT" };
+  }
+
+  if (totalQuantity <= LOW_STOCK_THRESHOLD) {
+    return { status: "LOW_STOCK", quantity: totalQuantity };
+  }
+
+  return { status: "IN_STOCK" };
+}
+
 /**
  * Transform raw Square catalog objects + related objects into
  * CategoryGroup[] grouped by category, filtered by location.
@@ -139,7 +187,8 @@ function transformModifierList(
 export function transformCatalogItems(
   objects: Square.CatalogObject[],
   relatedObjects: Square.CatalogObject[],
-  locationId: string
+  locationId: string,
+  inventoryCounts?: Map<string, number>
 ): CategoryGroup[] {
   const { categories: categoryMap, images: imageMap, modifierLists: modifierListMap } =
     buildLookups(relatedObjects);
@@ -193,6 +242,9 @@ export function transformCatalogItems(
       })
       .filter((ml): ml is ModifierList => ml !== null && ml.modifiers.length > 0);
 
+    // Determine availability from inventory counts and catalog flags
+    const availability = determineAvailability(itemData, inventoryCounts);
+
     const menuItem: MenuItem = {
       id: item.id,
       name: itemData.name ?? "Unnamed Item",
@@ -201,6 +253,7 @@ export function transformCatalogItems(
       imageUrl,
       variations,
       modifierLists,
+      availability,
     };
 
     if (!grouped.has(categoryId)) {

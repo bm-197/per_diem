@@ -5,6 +5,7 @@ export function EmptyState() {
         className="w-16 h-16 text-text-muted/40 mb-4"
         fill="none"
         stroke="currentColor"
+        aria-hidden="true"
         viewBox="0 0 24 24"
       >
         <path

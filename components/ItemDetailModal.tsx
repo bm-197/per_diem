@@ -14,12 +14,26 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState("");
+  // Track selected modifiers per modifier list: { [listId]: Set<modifierId> }
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Set<string>>>({});
 
+  // Reset all state when item changes
   useEffect(() => {
+    if (!item) return;
     setSelectedVariationIdx(0);
     setQuantity(1);
     setShowFullDescription(false);
     setSpecialInstructions("");
+    // Initialize modifier selections with defaults
+    const initial: Record<string, Set<string>> = {};
+    for (const ml of item.modifierLists) {
+      const defaults = new Set<string>();
+      for (const mod of ml.modifiers) {
+        if (mod.onByDefault) defaults.add(mod.id);
+      }
+      initial[ml.id] = defaults;
+    }
+    setSelectedModifiers(initial);
   }, [item]);
 
   useEffect(() => {
@@ -43,6 +57,23 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
     [onClose]
   );
 
+  const toggleModifier = useCallback(
+    (listId: string, modId: string, maxSelected: number) => {
+      setSelectedModifiers((prev) => {
+        const current = new Set(prev[listId] ?? []);
+        if (current.has(modId)) {
+          current.delete(modId);
+        } else {
+          // Enforce max selection
+          if (maxSelected > 0 && current.size >= maxSelected) return prev;
+          current.add(modId);
+        }
+        return { ...prev, [listId]: current };
+      });
+    },
+    []
+  );
+
   if (!item) return null;
 
   const selectedVariation = item.variations[selectedVariationIdx] ?? null;
@@ -56,19 +87,25 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/50 modal-overlay"
       onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.name}
     >
-      <div className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col">
+      <div
+        className="relative bg-background w-full max-w-4xl max-h-[85vh] rounded-2xl overflow-hidden flex flex-col"
+        style={{ animation: "item-modal-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+      >
         {/* Close button */}
         <div className="absolute top-3 left-3 z-10">
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center
-                       shadow-md hover:bg-white transition-colors"
+            className="w-9 h-9 rounded-full bg-background/90 backdrop-blur flex items-center justify-center
+                       shadow-md hover:bg-background transition-colors"
             aria-label="Close"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -76,8 +113,8 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
 
         {/* Main layout: image left, details right on desktop; stacked on mobile */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Image — left side on desktop, top on mobile */}
-          <div className="relative w-full md:w-1/2 aspect-[4/3] md:aspect-auto bg-bg-secondary shrink-0">
+          {/* Image */}
+          <div className="relative w-full md:w-1/2 aspect-[3/2] md:aspect-auto bg-bg-secondary shrink-0">
             {item.imageUrl ? (
               <Image
                 src={item.imageUrl}
@@ -87,18 +124,30 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
                 className="object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center min-h-[250px]">
-                <svg className="w-20 h-20 text-text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+              <Image
+                src="/placeholder-image.svg"
+                alt=""
+                fill
+                className="object-cover"
+              />
             )}
           </div>
 
-          {/* Details — right side on desktop, below on mobile */}
+          {/* Details */}
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="overflow-y-auto flex-1 p-5 space-y-5">
+              {/* Availability badge */}
+              {item.availability.status === "SOLD_OUT" && (
+                <div role="status" aria-live="polite" className="px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium text-center dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
+                  This item is currently sold out
+                </div>
+              )}
+              {item.availability.status === "LOW_STOCK" && (
+                <div role="status" aria-live="polite" className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium text-center dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-400">
+                  Only {item.availability.quantity} left — order soon!
+                </div>
+              )}
+
               {/* Name + Price */}
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-xl font-bold text-text-heading">{item.name}</h1>
@@ -122,7 +171,7 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
                 </p>
               )}
 
-              {/* Variations — always shown */}
+              {/* Variations */}
               {item.variations.length > 0 && (
                 <div>
                   <h3 className="text-base font-semibold mb-2">Variations</h3>
@@ -134,10 +183,10 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
                         <button
                           key={variation.id}
                           onClick={() => setSelectedVariationIdx(idx)}
-                          className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm
-                            transition-colors
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm
+                            transition-all duration-200
                             ${isSelected
-                              ? "border-brand bg-brand/5 ring-1 ring-brand"
+                              ? "border-brand bg-brand/5 shadow-sm shadow-brand/10"
                               : "border-border-default hover:border-border-muted"
                             }`}
                         >
@@ -152,46 +201,61 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
                 </div>
               )}
 
-              {/* Modifier lists (Milk, Flavor, etc.) */}
-              {item.modifierLists.map((ml) => (
-                <div key={ml.id}>
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-base font-semibold">{ml.name}</h3>
-                    <span className="text-xs text-text-muted">
-                      {ml.minSelected > 0 ? "Required" : "Optional"}
-                    </span>
-                  </div>
-                  {ml.maxSelected > 0 && (
-                    <p className="text-xs text-text-muted mb-2">
-                      Select maximum of {ml.maxSelected}
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    {ml.modifiers.map((mod) => (
-                      <div
-                        key={mod.id}
-                        className="flex items-center justify-between px-4 py-3 rounded-lg border border-border-default text-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                            ${mod.onByDefault ? "border-brand bg-brand" : "border-border-muted"}`}
+              {/* Modifier lists (Milk, Flavor, etc.) — now interactive */}
+              {item.modifierLists.map((ml) => {
+                const selected = selectedModifiers[ml.id] ?? new Set();
+                return (
+                  <div key={ml.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-base font-semibold">{ml.name}</h3>
+                      <span className="text-xs text-text-muted">
+                        {ml.minSelected > 0 ? "Required" : "Optional"}
+                      </span>
+                    </div>
+                    {ml.maxSelected > 0 && (
+                      <p className="text-xs text-text-muted mb-2">
+                        Select maximum of {ml.maxSelected}
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                      {ml.modifiers.map((mod) => {
+                        const isChecked = selected.has(mod.id);
+                        return (
+                          <button
+                            key={mod.id}
+                            type="button"
+                            onClick={() => toggleModifier(ml.id, mod.id, ml.maxSelected)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm
+                              transition-all duration-200 text-left
+                              ${isChecked
+                                ? "border-brand bg-brand/5 shadow-sm shadow-brand/10"
+                                : "border-border-default hover:border-border-muted"
+                              }`}
                           >
-                            {mod.onByDefault && (
-                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                                  transition-all duration-200
+                                  ${isChecked ? "border-brand bg-brand scale-110" : "border-border-muted"}`}
+                              >
+                                {isChecked && (
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="font-medium">{mod.name}</span>
+                            </div>
+                            {mod.formattedPrice && (
+                              <span className="text-text-muted">{mod.formattedPrice}</span>
                             )}
-                          </div>
-                          <span className="font-medium">{mod.name}</span>
-                        </div>
-                        {mod.formattedPrice && (
-                          <span className="text-text-muted">{mod.formattedPrice}</span>
-                        )}
-                      </div>
-                    ))}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Special instructions */}
               <div>
@@ -201,14 +265,15 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
                   onChange={(e) => setSpecialInstructions(e.target.value)}
                   placeholder="Add special instructions..."
                   rows={2}
-                  className="w-full px-4 py-3 rounded-lg border border-border-default text-sm
-                             placeholder:text-text-muted resize-none
-                             focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                  className="w-full px-4 py-3 rounded-xl border border-border-default text-sm
+                             bg-background placeholder:text-text-muted resize-none
+                             transition-colors duration-200
+                             focus:outline-none focus:border-brand"
                 />
               </div>
             </div>
 
-            {/* Sticky bottom bar: quantity + add to cart */}
+            {/* Sticky bottom bar */}
             <div className="border-t border-border-default p-4 flex items-center gap-4">
               <div className="flex items-center gap-0 bg-brand rounded-full">
                 <button
@@ -230,9 +295,12 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
                 </button>
               </div>
 
-              <button className="flex-1 h-11 bg-brand text-white rounded-full text-sm font-semibold
-                                 hover:bg-brand/90 transition-colors">
-                Add to cart
+              <button
+                disabled={item.availability.status === "SOLD_OUT"}
+                className="flex-1 h-11 bg-brand text-white rounded-full text-sm font-semibold
+                           hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {item.availability.status === "SOLD_OUT" ? "Sold Out" : "Add to cart"}
               </button>
             </div>
           </div>

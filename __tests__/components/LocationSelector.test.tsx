@@ -26,7 +26,7 @@ describe("LocationSelector", () => {
       <LocationSelector
         locations={locations}
         selectedId="loc1"
-        onOpenPicker={() => {}}
+        onLocationChange={() => {}}
       />
     );
 
@@ -34,18 +34,34 @@ describe("LocationSelector", () => {
     expect(screen.getByText("Pickup from")).toBeInTheDocument();
   });
 
-  it("calls onOpenPicker when clicked", () => {
-    const onOpen = vi.fn();
+  it("opens dropdown when clicked and shows all locations", () => {
     render(
       <LocationSelector
         locations={locations}
         selectedId="loc1"
-        onOpenPicker={onOpen}
+        onLocationChange={() => {}}
       />
     );
 
-    fireEvent.click(screen.getByRole("button"));
-    expect(onOpen).toHaveBeenCalledOnce();
+    // Click to open
+    fireEvent.click(screen.getByText("Downtown"));
+    expect(screen.getByText("Uptown")).toBeInTheDocument();
+    expect(screen.getByText("123 Main St, Austin, TX")).toBeInTheDocument();
+  });
+
+  it("calls onLocationChange when a location is selected", () => {
+    const onChange = vi.fn();
+    render(
+      <LocationSelector
+        locations={locations}
+        selectedId="loc1"
+        onLocationChange={onChange}
+      />
+    );
+
+    fireEvent.click(screen.getByText("Downtown"));
+    fireEvent.click(screen.getByText("Uptown"));
+    expect(onChange).toHaveBeenCalledWith("loc2");
   });
 
   it("shows fallback text when no location selected", () => {
@@ -53,7 +69,7 @@ describe("LocationSelector", () => {
       <LocationSelector
         locations={[]}
         selectedId={null}
-        onOpenPicker={() => {}}
+        onLocationChange={() => {}}
       />
     );
 

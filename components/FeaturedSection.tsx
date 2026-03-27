@@ -33,8 +33,9 @@ export function FeaturedSection({ categories, onItemClick }: FeaturedSectionProp
             key={item.id}
             type="button"
             onClick={() => onItemClick(item)}
-            className="shrink-0 w-[320px] md:w-[380px] flex bg-white rounded-xl border border-border-default
-                       overflow-hidden hover:shadow-md transition-shadow text-left cursor-pointer"
+            className="shrink-0 w-[320px] md:w-[380px] flex bg-background rounded-xl border border-border-default
+                       overflow-hidden hover:shadow-md hover:-translate-y-0.5
+                       transition-all duration-200 text-left cursor-pointer active:scale-[0.98]"
           >
             {/* Image */}
             <div className="relative w-24 h-24 shrink-0 m-3">
@@ -47,12 +48,12 @@ export function FeaturedSection({ categories, onItemClick }: FeaturedSectionProp
                   className="object-cover rounded-lg"
                 />
               ) : (
-                <div className="w-full h-full bg-bg-secondary rounded-lg flex items-center justify-center">
-                  <svg className="w-8 h-8 text-text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
+                <Image
+                  src="/placeholder-image.svg"
+                  alt=""
+                  fill
+                  className="object-cover rounded-lg"
+                />
               )}
             </div>
 

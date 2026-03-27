@@ -35,6 +35,11 @@ export interface CategoryGroup {
   items: MenuItem[];
 }
 
+export type ItemAvailability =
+  | { status: "IN_STOCK" }
+  | { status: "LOW_STOCK"; quantity: number }
+  | { status: "SOLD_OUT" };
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -43,6 +48,7 @@ export interface MenuItem {
   imageUrl: string | null;
   variations: Variation[];
   modifierLists: ModifierList[];
+  availability: ItemAvailability;
 }
 
 export interface ModifierList {

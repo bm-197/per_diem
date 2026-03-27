@@ -14,9 +14,11 @@ export function CategoryNav({
   onCategoryChange,
 }: CategoryNavProps) {
   return (
-    <nav className="overflow-x-auto scrollbar-hide">
-      <div className="flex gap-2 py-3 px-4 md:px-0">
+    <nav aria-label="Menu categories" className="overflow-x-auto scrollbar-hide">
+      <div className="flex gap-2 py-3 px-4 md:px-0" role="tablist">
         <button
+          role="tab"
+          aria-selected={selectedId === null}
           onClick={() => onCategoryChange(null)}
           className={`shrink-0 h-10 px-4 rounded-full text-sm font-medium transition-colors
             ${
@@ -30,6 +32,8 @@ export function CategoryNav({
         {categories.map((cat) => (
           <button
             key={cat.id}
+            role="tab"
+            aria-selected={selectedId === cat.id}
             onClick={() => onCategoryChange(cat.id)}
             className={`shrink-0 h-10 px-4 rounded-full text-sm font-medium transition-colors
               ${

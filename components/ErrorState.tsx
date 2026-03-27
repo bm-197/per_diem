@@ -10,6 +10,7 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
         className="w-16 h-16 text-brand mb-4"
         fill="none"
         stroke="currentColor"
+        aria-hidden="true"
         viewBox="0 0 24 24"
       >
         <path

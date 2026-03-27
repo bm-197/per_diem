@@ -30,8 +30,41 @@ export async function getLocations(): Promise<LocationResponse> {
 }
 
 /**
+ * Fetch inventory counts for a list of catalog object IDs at a location.
+ * Returns a map of catalogObjectId → quantity.
+ */
+async function getInventoryCounts(
+  catalogObjectIds: string[],
+  locationId: string
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (catalogObjectIds.length === 0) return counts;
+
+  const client = getSquareClient();
+
+  try {
+    const response = await client.inventory.batchGetCounts({
+      catalogObjectIds,
+      locationIds: [locationId],
+    });
+
+    // The response is a pageable — iterate through counts
+    for await (const count of response) {
+      if (count.catalogObjectId && count.state === "IN_STOCK" && count.quantity) {
+        const qty = parseFloat(count.quantity);
+        counts.set(count.catalogObjectId, qty);
+      }
+    }
+  } catch {
+    // If inventory API fails (e.g., not enabled), return empty — items show as available
+  }
+
+  return counts;
+}
+
+/**
  * Fetch full catalog for a location with caching.
- * Handles pagination and deduplication of related objects.
+ * Includes inventory-based availability status.
  */
 export async function getFullCatalog(
   locationId: string
@@ -59,7 +92,22 @@ export async function getFullCatalog(
   } while (cursor);
 
   const uniqueRelated = deduplicateById(allRelated);
-  const categories = transformCatalogItems(allObjects, uniqueRelated, locationId);
+
+  // Collect all variation IDs for inventory lookup
+  const variationIds: string[] = [];
+  for (const obj of allObjects) {
+    if (obj.type === "ITEM") {
+      const item = obj as Square.CatalogObject.Item;
+      for (const v of item.itemData?.variations ?? []) {
+        if (v.id) variationIds.push(v.id);
+      }
+    }
+  }
+
+  // Fetch inventory counts
+  const inventoryCounts = await getInventoryCounts(variationIds, locationId);
+
+  const categories = transformCatalogItems(allObjects, uniqueRelated, locationId, inventoryCounts);
   const result: CatalogResponse = { categories };
 
   await setCache(cacheKey, result, CACHE_TTL);

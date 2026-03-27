@@ -6,11 +6,9 @@ import { useCatalog } from "@/lib/hooks/useCatalog";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { useSearch } from "@/lib/hooks/useSearch";
 import { Header } from "./Header";
-import { CategoryNav } from "./CategoryNav";
 import { MenuSection } from "./MenuSection";
 import { FeaturedSection } from "./FeaturedSection";
 import { ItemDetailModal } from "./ItemDetailModal";
-import { LocationPickerModal } from "./LocationPickerModal";
 import { DietaryFilterModal, type DietaryFilters } from "./DietaryFilterModal";
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { ErrorState } from "./ErrorState";
@@ -25,7 +23,6 @@ export function MenuContent() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [isDietaryFilterOpen, setIsDietaryFilterOpen] = useState(false);
   const [dietaryFilters, setDietaryFilters] = useState<DietaryFilters>({
     allergens: [],
@@ -49,24 +46,16 @@ export function MenuContent() {
   const { categories: categorySummaries } = useCategories(selectedLocationId);
 
   const filteredBySearch = useSearch(catalogCategories, searchQuery);
-
-  const displayedCategories =
-    selectedCategoryId === null
-      ? filteredBySearch
-      : filteredBySearch.filter(
-          (group) => group.category.id === selectedCategoryId
-        );
+  const displayedCategories = filteredBySearch;
 
   const activeDietaryFilterCount =
     dietaryFilters.allergens.length + dietaryFilters.preferences.length;
 
-  // Restore location from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setSelectedLocationId(saved);
   }, []);
 
-  // Auto-select first location if none saved
   useEffect(() => {
     if (!selectedLocationId && locations.length > 0) {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -77,7 +66,7 @@ export function MenuContent() {
     }
   }, [locations, selectedLocationId]);
 
-  const handleLocationConfirm = useCallback((id: string) => {
+  const handleLocationChange = useCallback((id: string) => {
     setSelectedLocationId(id);
     setSelectedCategoryId(null);
     setSearchQuery("");
@@ -91,8 +80,9 @@ export function MenuContent() {
   const handleCategoryChange = useCallback((id: string | null) => {
     setSelectedCategoryId(id);
     if (id) {
-      const el = document.getElementById(`section-${id}`);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, []);
 
@@ -108,15 +98,19 @@ export function MenuContent() {
     setDietaryFilters(filters);
   }, []);
 
-  // Error state
   if (locationsError) {
     return (
       <>
         <Header
           locations={[]}
           selectedLocationId={null}
-          onOpenLocationPicker={() => {}}
+          onLocationChange={handleLocationChange}
           onSearch={handleSearch}
+          categorySummaries={[]}
+          selectedCategoryId={null}
+          onCategoryChange={() => {}}
+          onOpenDietaryFilter={() => {}}
+          activeDietaryFilterCount={0}
         />
         <main className="flex-1 max-w-7xl mx-auto w-full px-4">
           <ErrorState message={locationsError} onRetry={retryLocations} />
@@ -133,47 +127,16 @@ export function MenuContent() {
       <Header
         locations={locations}
         selectedLocationId={selectedLocationId}
-        onOpenLocationPicker={() => setIsLocationPickerOpen(true)}
+        onLocationChange={handleLocationChange}
         onSearch={handleSearch}
+        categorySummaries={categorySummaries}
+        selectedCategoryId={selectedCategoryId}
+        onCategoryChange={handleCategoryChange}
+        onOpenDietaryFilter={() => setIsDietaryFilterOpen(true)}
+        activeDietaryFilterCount={activeDietaryFilterCount}
       />
 
-      {/* Category navigation + Dietary filter */}
-      {categorySummaries.length > 0 && (
-        <div className="sticky top-[65px] z-10 bg-white border-b border-border-light">
-          <div className="max-w-7xl mx-auto w-full flex items-center">
-            <div className="flex-1 overflow-hidden">
-              <CategoryNav
-                categories={categorySummaries}
-                selectedId={selectedCategoryId}
-                onCategoryChange={handleCategoryChange}
-              />
-            </div>
-
-            {/* Dietary filter button */}
-            <div className="shrink-0 pr-4 pl-2">
-              <button
-                onClick={() => setIsDietaryFilterOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border-default
-                           text-sm hover:bg-bg-secondary transition-colors relative"
-              >
-                <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                <span className="hidden md:inline text-text-muted">Dietary Filter</span>
-                {activeDietaryFilterCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-brand text-white text-xs
-                                   rounded-full flex items-center justify-center font-medium">
-                    {activeDietaryFilterCount}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-10" aria-live="polite">
         {locationsLoading || catalogLoading ? (
           <LoadingSkeleton />
         ) : catalogError ? (
@@ -202,16 +165,7 @@ export function MenuContent() {
 
       <Footer />
 
-      {/* Modals */}
       <ItemDetailModal item={selectedItem} onClose={handleCloseItemModal} />
-
-      <LocationPickerModal
-        isOpen={isLocationPickerOpen}
-        onClose={() => setIsLocationPickerOpen(false)}
-        locations={locations}
-        selectedId={selectedLocationId}
-        onConfirm={handleLocationConfirm}
-      />
 
       <DietaryFilterModal
         isOpen={isDietaryFilterOpen}

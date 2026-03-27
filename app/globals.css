@@ -1,33 +1,6 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #11181c;
-
-  /* Brand */
-  --brand-primary: #0171ea;
-  --brand-dark: #182435;
-
-  /* Text */
-  --text-primary: #11181c;
-  --text-heading: #111827;
-  --text-secondary: #374151;
-  --text-muted: #4b5563;
-  --text-subtle: #52525b;
-
-  /* Backgrounds */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f0f0f0;
-  --bg-brand: #0171ea;
-  --bg-badge: #2563eb;
-
-  /* Borders */
-  --border-light: #f0f0f0;
-  --border-default: #e5e7eb;
-  --border-muted: #c1c1c1;
-}
-
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-brand: var(--brand-primary);
@@ -46,15 +19,156 @@
   --font-sans: var(--font-sora);
 }
 
+:root {
+  --background: #ffffff;
+  --foreground: #11181c;
+
+  /* Brand */
+  --brand-primary: #0171ea;
+  --brand-dark: #182435;
+
+  /* Text */
+  --text-primary: #11181c;
+  --text-heading: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4b5563;
+  --text-subtle: #52525b;
+
+  /* Backgrounds */
+  --bg-secondary: #f0f0f0;
+  --bg-brand: #0171ea;
+  --bg-badge: #2563eb;
+
+  /* Borders */
+  --border-light: #f0f0f0;
+  --border-default: #e5e7eb;
+  --border-muted: #c1c1c1;
+}
+
+html.dark {
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+
+  --brand-primary: #3b8df0;
+  --brand-dark: #e5e5e5;
+
+  --text-primary: #e5e5e5;
+  --text-heading: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --text-subtle: #737373;
+
+  --bg-secondary: #1a1a1a;
+  --bg-brand: #3b8df0;
+  --bg-badge: #3b82f6;
+
+  --border-light: #1f1f1f;
+  --border-default: #262626;
+  --border-muted: #404040;
+
+  color-scheme: dark;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sora), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial,
     sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Hide scrollbar but keep scrolling */
+/* ── Focus ring for all interactive elements ── */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* ── Button press feedback ── */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ── Shimmer skeleton animation ── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    var(--border-default) 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ── Modal enter animations ── */
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-slide-up {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes modal-slide-up-mobile {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-overlay {
+  animation: modal-overlay-in 0.2s ease-out;
+}
+
+.modal-content {
+  animation: modal-slide-up 0.25s ease-out;
+}
+
+.modal-content-mobile {
+  animation: modal-slide-up-mobile 0.3s ease-out;
+}
+
+/* ── Item detail modal spring animation ── */
+@keyframes item-modal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Location picker island expand ── */
+@keyframes island-expand {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.3) scaleX(0.8);
+    transform-origin: top center;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1) scaleX(1);
+    transform-origin: top center;
+  }
+}
+
+/* ── Hide scrollbar but keep scrolling ── */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;

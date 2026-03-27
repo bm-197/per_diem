@@ -76,10 +76,13 @@ export function DietaryFilterModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 modal-overlay"
       onClick={handleBackdrop}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Dietary Filters"
     >
-      <div className="bg-white w-full max-w-lg max-h-[85vh] rounded-2xl flex flex-col mx-4">
+      <div className="bg-background w-full max-w-lg max-h-[85vh] rounded-2xl flex flex-col mx-4 modal-content">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border-default">
           <h2 className="text-xl font-bold">Dietary Filters</h2>

@@ -114,7 +114,7 @@ export function ItemDetailModal({ item, onClose }: ItemDetailModalProps) {
         {/* Main layout: image left, details right on desktop; stacked on mobile */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* Image */}
-          <div className="relative w-full md:w-1/2 aspect-[3/2] md:aspect-auto bg-bg-secondary shrink-0">
+          <div className="relative w-full md:w-1/2 aspect-3/2 md:aspect-auto bg-bg-secondary shrink-0">
             {item.imageUrl ? (
               <Image
                 src={item.imageUrl}

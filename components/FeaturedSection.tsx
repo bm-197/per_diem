@@ -28,7 +28,7 @@ export function FeaturedSection({ categories, onItemClick }: FeaturedSectionProp
     <section>
       <h3 className="text-2xl font-bold text-text-heading mb-4">Featured</h3>
       <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-        {featuredItems.map((item) => (
+        {featuredItems.map((item, idx) => (
           <button
             key={item.id}
             type="button"
@@ -46,6 +46,7 @@ export function FeaturedSection({ categories, onItemClick }: FeaturedSectionProp
                   fill
                   sizes="96px"
                   className="object-cover rounded-lg"
+                  priority={idx === 0}
                 />
               ) : (
                 <Image

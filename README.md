@@ -1,185 +1,182 @@
-# Per Diem Coffee — Square Menu App
+# Per Diem — Square Menu App
 
-A mobile-first restaurant menu web app that connects to the Square Catalog API and displays menu items filtered by location and category.
+A full-stack restaurant menu web app that pulls from the Square Catalog API. Customers pick a location, browse the menu by category, and view item details with modifiers. Built mobile-first with Next.js 16.
 
-## Tech Stack
+## Demo
 
-| Layer | Choice |
-|-------|--------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript (strict mode) |
-| Square SDK | `square` npm package |
-| Styling | Tailwind CSS v4 |
-| Caching | Upstash Redis (HTTP-based, serverless) |
-| Testing | Vitest + React Testing Library |
-| Package Manager | pnpm |
-| Containerization | Docker + docker-compose |
+[Watch the walkthrough on Loom](https://www.loom.com/share/c2cc0706e4f44f61a8ed179435b163f2)
 
-## Quick Start
+### Screenshots
 
-### Prerequisites
-- Node.js 20.9+
-- pnpm
-- Square Developer account ([sign up](https://developer.squareup.com))
-- Upstash Redis database ([sign up](https://console.upstash.com))
+| Light Mode | Dark Mode |
+|:---:|:---:|
+| ![Light mode](assets/lightmode.png) | ![Dark mode](assets/darkmode.png) |
 
-### Setup
+| Location Picker | Item Detail |
+|:---:|:---:|
+| ![Location picker dropdown](assets/locationpicker.png) | ![Item detail modal](assets/itemdetail.png) |
+
+| Mobile UI | Mobile Item Detail |
+|:---:|:---:|
+| ![Mobile responsive layout](assets/mobileui.png) | ![Mobile item detail](assets/mobileui_itemdetail.png) |
+
+## Getting Started
+
+You'll need Node.js 20.9+, pnpm, a [Square Developer](https://developer.squareup.com) account, and an [Upstash Redis](https://console.upstash.com) database.
 
 ```bash
-# Clone and install
-git clone <repo-url>
+git clone https://github.com/bm-197/per_diem
 cd per_diem
-pnpm install
-
-# Configure environment
-cp .env.example .env
-# Fill in your Square sandbox token and Upstash credentials
-
-# Start development server
-pnpm dev
+pnpm i
+cp .env.example .env   # fill in your credentials
+pnpm dev               # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-### Docker
+Or with Docker:
 
 ```bash
-# Development (hot reload)
-docker-compose up
-
-# Production
-DOCKER_TARGET=prod docker-compose up --build
+docker-compose up                           # dev mode with hot reload
+DOCKER_TARGET=prod docker-compose up --build # production build
 ```
 
-## Environment Variables
+## How It Works
 
-| Variable | Description |
+The app is a Next.js backend proxy sitting between the browser and Square's API. The Square access token never leaves the server.
+
+**Request flow:**
+
+```
+Browser → Next.js API Route → Redis Cache (hit?) → Square SDK → Transform → Cache → Response
+```
+
+When a request comes in, it checks Redis first. On a cache miss, it calls Square's `SearchCatalogObjects` with `includeRelatedObjects: true`, paginates through all results, joins category names and image URLs from the related objects, filters by location, pulls inventory counts, and assembles the response. That assembled result gets cached for 5 minutes.
+
+I went with Upstash Redis instead of in-memory caching because this deploys to Vercel — serverless functions don't share memory between invocations, so an in-memory Map would be useless. Upstash is HTTP-based so it works the same locally, in Docker, and on Vercel.
+
+### API Endpoints
+
+| Endpoint | What it does |
 |----------|-------------|
-| `SQUARE_ACCESS_TOKEN` | Square sandbox or production access token |
-| `SQUARE_ENVIRONMENT` | `sandbox` or `production` |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token |
+| `GET /api/locations` | Returns active Square locations |
+| `GET /api/catalog?location_id=X` | Menu items grouped by category, with modifiers and availability |
+| `GET /api/catalog/categories?location_id=X` | Category names with item counts |
+| `POST /api/webhooks/square` | Receives `catalog.version.updated` webhooks to bust the cache |
 
-## Architecture
 
-### API Routes (Backend Proxy)
+## What's in the Frontend
 
-Square credentials never reach the client. All Square API calls go through Next.js API routes:
+The UI is built mobile-first (375px target) and scales up to desktop.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/locations` | GET | List active Square locations |
-| `/api/catalog?location_id=X` | GET | Menu items grouped by category for a location |
-| `/api/catalog/categories?location_id=X` | GET | Category summaries with item counts |
-| `/api/webhooks/square` | POST | Square webhook for cache invalidation |
+**Location picker** — A dropdown that expands from the header button. Pick a location and the menu reloads. Choice persists in localStorage.
 
-### Caching
+**Category navigation** — Horizontal scrollable pills. Clicking one smooth-scrolls to that section (doesn't filter — all sections stay visible).
 
-Upstash Redis with 5-minute TTL. Works identically in local dev, Docker, and Vercel since it's HTTP-based (no TCP connections).
+**Menu items** — 2-column grid on mobile (no descriptions, 34px rounded images), 4-5 columns on desktop (3-line clamped descriptions, 8px rounded images).
 
-Cache keys: `locations`, `catalog:{locationId}`, `categories:{locationId}`
+**Item detail modal** — Opens when you click any item. Image on the left, details on the right (stacked on mobile). Shows variations, modifiers (interactive — you can toggle them), special instructions field, quantity controls.
 
-Cache invalidation: Square webhook (`catalog.version.updated`) busts all catalog/category cache entries.
 
-### Data Flow
+**Featured section** — Horizontal cards at the top showing one item from each category.
 
-```
-Square API → API Route → Transform + Cache → JSON Response → Client Hook → Component
-```
+**Search** — Client-side filtering across item names and descriptions. Debounced at 300ms.
 
-1. **Fetch**: Paginate through Square's `SearchCatalogObjects` with `includeRelatedObjects: true`
-2. **Join**: Resolve category names and image URLs from `relatedObjects` via ID lookup maps
-3. **Filter**: Check `presentAtAllLocations`, `presentAtLocationIds`, `absentAtLocationIds`
-4. **Transform**: Convert BigInt prices to Number, format as "$X.XX", group by category
-5. **Cache**: Store assembled result in Redis
-6. **Serve**: Return typed JSON to the frontend
+**Dietary filters** — Modal with allergen exclusions and dietary preference inclusions. Client-side filtering.
 
-### Frontend
+**Dark mode** — Toggle in the header. Uses `next-themes` with the `.dark` class strategy. Persists to localStorage, respects system preference.
 
-- **Server Components** by default, `"use client"` only for interactive components
-- Custom hooks (`useLocations`, `useCatalog`, `useCategories`, `useSearch`) for data fetching
-- Mobile-first responsive grid: 2 columns on mobile, 4-5 on desktop
-- Loading skeletons, error states with retry, empty states
-- Location persisted to `localStorage`
+**Loading states** — Shimmer skeleton animations while data loads. Error states with retry buttons. Empty states when a location has no items.
 
 ## Project Structure
 
 ```
-per_diem/
-├── app/
-│   ├── api/
-│   │   ├── locations/route.ts
-│   │   ├── catalog/route.ts
-│   │   ├── catalog/categories/route.ts
-│   │   └── webhooks/square/route.ts
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
-├── components/
-│   ├── MenuContent.tsx          # Main orchestrator (client)
-│   ├── Header.tsx               # Location selector + search
-│   ├── CategoryNav.tsx          # Horizontal scrollable pills
-│   ├── MenuSection.tsx          # Category heading + item grid
-│   ├── MenuItemCard.tsx         # Individual menu item
-│   ├── LoadingSkeleton.tsx
-│   ├── ErrorState.tsx
-│   ├── EmptyState.tsx
-│   └── Footer.tsx
-├── lib/
-│   ├── types.ts                 # Shared TypeScript interfaces
-│   ├── square.ts                # Square SDK singleton
-│   ├── cache.ts                 # Upstash Redis wrapper
-│   ├── errors.ts                # Error mapping
-│   ├── square-transformers.ts   # Square → app data transforms
-│   ├── square-service.ts        # Business logic (fetch + cache)
-│   ├── api-utils.ts             # Request logging wrapper
-│   ├── utils.ts                 # formatPrice, truncateText
-│   └── hooks/
-│       ├── useLocations.ts
-│       ├── useCatalog.ts
-│       ├── useCategories.ts
-│       └── useSearch.ts
-├── __tests__/                   # 49 tests across 8 files
-├── proxy.ts                     # Request logging (Next.js 16)
-├── Dockerfile
-├── docker-compose.yml
-└── .env.example
+app/
+  api/
+    locations/route.ts        # GET — list active locations
+    catalog/route.ts          # GET — menu items by location
+    catalog/categories/route.ts
+    webhooks/square/route.ts  # POST — cache invalidation
+  layout.tsx                  # Root layout, Sora font, ThemeProvider
+  page.tsx                    # Renders MenuContent
+  globals.css                 # Design tokens, animations, dark mode
+
+components/
+  MenuContent.tsx             # Orchestrates all state and data fetching
+  Header.tsx                  # Logo, search, location picker, theme toggle
+  LocationSelector.tsx        # Dynamic Island dropdown
+  CategoryNav.tsx             # Scrollable category pills
+  MenuSection.tsx             # Category heading + item grid
+  MenuItemCard.tsx            # Item card with availability badges
+  ItemDetailModal.tsx         # Full item detail with modifiers
+  FeaturedSection.tsx         # Horizontal featured cards
+  DietaryFilterModal.tsx      # Allergen/dietary preference filters
+  SearchBar.tsx               # Debounced search input
+  ThemeToggle.tsx             # Dark/light mode switch
+  LoadingSkeleton.tsx         # Shimmer loading placeholders
+  ErrorState.tsx              # Error message + retry
+  EmptyState.tsx              # No items message
+
+lib/
+  types.ts                    # All shared TypeScript interfaces
+  square.ts                   # Square SDK singleton
+  square-service.ts           # Business logic — fetch, paginate, cache
+  square-transformers.ts      # Raw Square data → app types
+  cache.ts                    # Upstash Redis get/set/invalidate
+  errors.ts                   # Square error → API error mapping
+  api-utils.ts                # Request logging wrapper
+  utils.ts                    # Price formatting, text truncation
+  hooks/                      # useLocations, useCatalog, useCategories, useSearch
+
+proxy.ts                      # Next.js 16 request logging (replaces middleware)
+Dockerfile                    # Multi-stage: dev (hot reload) + prod (standalone)
+docker-compose.yml
 ```
 
 ## Testing
 
 ```bash
-pnpm test          # Watch mode
-pnpm test:run      # Single run
-pnpm test:coverage # With coverage
+pnpm test          # watch mode
+pnpm test:run      # single run
+pnpm test:coverage # with coverage
 ```
 
-**49 tests** covering:
-- Unit: price formatting, text truncation, BigInt serialization
-- Unit: cache get/set/delete/invalidate (mocked Redis)
-- Unit: Square data transformers (location filtering, category grouping, image resolution, BigInt prices)
-- Component: CategoryNav, MenuItemCard, LocationSelector
-- Integration: API route handlers with mocked services
+Tests cover:
+- Price formatting, text truncation, BigInt serialization
+- Redis cache operations (mocked)
+- Square data transformers — location filtering, category grouping, image/modifier resolution, BigInt price conversion
+- Component rendering — CategoryNav, MenuItemCard, LocationSelector
+- API route handlers — success paths, error mapping, missing parameter validation
 
-## Trade-offs & Assumptions
+## Accessibility
 
-1. **Upstash Redis over in-memory cache**: In-memory caching is useless on Vercel serverless (no shared memory between invocations). Upstash Redis adds ~2ms latency per cache operation but works correctly in serverless.
+- Focus-visible outlines on all interactive elements
+- `role="dialog"` and `aria-modal` on all modals
+- `role="tablist"` / `role="tab"` / `aria-selected` on category navigation
+- `role="listbox"` / `role="option"` / `aria-selected` on location picker
+- `aria-expanded` and `aria-haspopup` on dropdown triggers
+- `aria-live="polite"` on dynamic content regions (loading states, availability badges)
+- `aria-hidden="true"` on decorative SVGs
+- `aria-label` on icon-only buttons
+- Keyboard navigation — Tab, Escape to close, Enter/Space to activate
 
-2. **Catalog search over list**: Using `SearchCatalogObjects` with `includeRelatedObjects: true` to get items + categories + images in one paginated call, rather than making separate calls.
 
-3. **Client-side category filtering**: Categories are fetched upfront and filtering happens client-side for instant UI response. The full catalog is fetched once per location and cached.
+## Environment Variables
 
-4. **No SSR for menu data**: Menu content is fetched client-side via hooks because location selection is user-driven (stored in localStorage). SSR would require a default location assumption.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SQUARE_ACCESS_TOKEN` | Yes | Square sandbox or production access token |
+| `SQUARE_ENVIRONMENT` | Yes | `sandbox` or `production` |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | No | For webhook signature verification |
+| `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis REST endpoint |
+| `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis REST token |
 
-5. **Square SDK BigInt handling**: The SDK returns `bigint` for monetary amounts. We convert to `Number` at the transformation layer since menu prices won't exceed `Number.MAX_SAFE_INTEGER`.
+## Tech Stack
 
-## Commands
-
-```bash
-pnpm dev            # Development server
-pnpm build          # Production build
-pnpm start          # Start production server
-pnpm test           # Run tests (watch)
-pnpm test:run       # Run tests (once)
-pnpm lint           # ESLint
-```
+- **Next.js 16** (App Router) — framework
+- **TypeScript** (strict mode) — language
+- **Tailwind CSS v4** — styling
+- **Square SDK** (`square` npm) — catalog, locations, inventory APIs
+- **Upstash Redis** (`@upstash/redis`) — server-side caching
+- **next-themes** — dark mode
+- **Vitest + React Testing Library** — testing
+- **pnpm** — package manager
+- **Docker** — containerization

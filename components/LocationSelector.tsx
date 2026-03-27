@@ -89,7 +89,8 @@ export function LocationSelector({
         <div
           role="listbox"
           aria-label="Select pickup location"
-          className="absolute top-[calc(100%+6px)] left-0 z-50 w-[340px] md:w-[420px]
+          className="absolute top-[calc(100%+6px)] right-0 md:left-0 md:right-auto z-50
+                     w-[calc(100vw-2rem)] max-w-[420px]
                      bg-background border border-border-default rounded-2xl
                      shadow-xl shadow-black/10 overflow-hidden"
           style={{ animation: "island-expand 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
